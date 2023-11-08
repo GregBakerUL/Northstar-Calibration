@@ -177,8 +177,8 @@ class IntelCameraThread(CameraThread):
         extrinsics = streams["left"].get_extrinsics_to(streams["right"])
         R = np.reshape(extrinsics.rotation, (3, 3)).T
         T = np.array(extrinsics.translation)
-        self.calibration["R1"] = np.eye(3)
-        self.calibration["R2"] = R
+        self.calibration["leftR"] = np.eye(3)
+        self.calibration["rightR"] = R
         self.calibration["baseline"] = np.linalg.norm(T)
         for ii, key in enumerate(intrinsics):
             i = intrinsics[key]
@@ -210,7 +210,7 @@ class IntelCameraThread(CameraThread):
         
         #calibration data
         # calibration = self._readCalibrationFromDevice(profile)
-        calibration = load_calibration_from_file("data/T265_calibration_kbrad4.json", (height, width))
+        self.calibration = load_calibration_from_file("data/T265_calibration_kbrad4.json", (height, width))
 
         return
         
@@ -659,7 +659,7 @@ class T265Camera(Camera):
         
     def pixelsToRectilinear(self, sideId, coordinates):
         cameraMatrix = self.getCameraMatrix(sideId)
-        r = self.calibration[f"R{sideId + 1}"]
+        r = self.calibration[self.cameraThread.sides[sideId] + "R"]
         if self.undistort is True:
             return cv2.undistortPoints(coordinates, cameraMatrix, np.zeros(5)).reshape(coordinates.shape) #same as backproject, reshape added to match input shape
         else:
