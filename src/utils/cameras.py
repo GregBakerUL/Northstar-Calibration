@@ -14,6 +14,62 @@ def backproject(cameraMatrix, x, y):
     _, fy, cy = cameraMatrix[1]
     return np.array(((x - cx) / fx, (y - cy) / fy), dtype=np.float32)
 
+def load_calibration_from_file(file_path, resolution):
+    calibration = {}
+    with open(file_path, 'r') as f:
+        cal_data = json.load(f)
+    for camera in cal_data['cameras']:
+        cal = camera['calibration']
+        name = cal['name']
+        intrinsics = cal['intrinsics']['affine']
+        distortion = cal['intrinsics']['distortion']['radial']
+        extrinsics = cal['extrinsics']
+        
+        # Setup camera matrix
+        cm = calibration[name + "CameraMatrix"] = np.array([
+            [intrinsics['fx'], intrinsics['skew'], intrinsics['cx']],
+            [0, intrinsics['fy'], intrinsics['cy']],
+            [0, 0, 1]
+        ])
+
+        # Setup distortion coefficients
+        dc = calibration[name + "DistCoeffs"] = np.array([
+            distortion['k1'],
+            distortion['k2'],
+            distortion['k3'],
+            distortion['k4']
+        ])
+
+        # Assuming the extrinsics are relative to the first camera and in the correct format
+        R = np.array([
+            [extrinsics['rotation']['r11'], extrinsics['rotation']['r12'], extrinsics['rotation']['r13']],
+            [extrinsics['rotation']['r21'], extrinsics['rotation']['r22'], extrinsics['rotation']['r23']],
+            [extrinsics['rotation']['r31'], extrinsics['rotation']['r32'], extrinsics['rotation']['r33']]
+        ]).T  # Transpose if necessary
+
+        T = np.array([
+            extrinsics['translation']['tx'],
+            extrinsics['translation']['ty'],
+            extrinsics['translation']['tz']
+        ])
+
+        # Setup rotation and translation
+        calibration[name + "R"] = R
+        calibration[name + "T"] = T
+
+        # Assuming width and height need to be specified for initUndistortRectifyMap
+        calibration[name + "Map"] = cv2.fisheye.initUndistortRectifyMap(
+            cm, dc, R, cm, resolution, cv2.CV_32FC1
+        )
+
+    # Setup baseline if you have two cameras and translation between them
+    if len(cal_data['cameras']) > 1:
+        T1 = np.array(calibration["leftT"])
+        T2 = np.array(calibration["rightT"])
+        calibration["baseline"] = np.linalg.norm(T2 - T1)
+
+    return calibration
+
 class CameraThread(threading.Thread, metaclass=abc.ABCMeta):
     
     def __init__(self):
@@ -107,30 +163,12 @@ class IntelCameraThread(CameraThread):
         if self._sensor is not None:
             self._sensor.set_option(rs.option.exposure, self._exposure)
         return
-        
-    def _tinit(self):
-        self._pipe = rs.pipeline()
-        cfg = rs.config()
-        height, width = self.resolution
-        width >>= 1
-        cfg.enable_stream(rs.stream.fisheye, 1, width, height, rs.format.y8, 30)
-        cfg.enable_stream(rs.stream.fisheye, 2, width, height, rs.format.y8, 30)
-        
-        #sensor options - needs to be done before start
-        profile = cfg.resolve(self._pipe)
-        sensor = profile.get_device().query_sensors()[0]
-        sensor.set_option(rs.option.enable_auto_exposure, 0)
-        sensor.set_option(rs.option.exposure, self.exposure)
-        sensor.set_option(rs.option.gain, self._gain)
-        
-        profile = self._pipe.start(cfg)
-        self._sensor = profile.get_device().query_sensors()[0]
+    
+    def _readCalibrationFromDevice(self, profile):
         streams = {
             "left"  : profile.get_stream(rs.stream.fisheye, 1).as_video_stream_profile(),
             "right" : profile.get_stream(rs.stream.fisheye, 2).as_video_stream_profile()
         }
-        
-        #calibration data
         self.calibration = {}
         intrinsics = {
             "left"  : streams["left"].get_intrinsics(),
@@ -151,6 +189,29 @@ class IntelCameraThread(CameraThread):
             ])
             dc = self.calibration[key + "DistCoeffs"] = np.array(i.coeffs[:4])
             self.calibration[key + "Map"] = cv2.fisheye.initUndistortRectifyMap(cm, dc, self.calibration[f"R{ii + 1}"], cm, (i.width, i.height), cv2.CV_32FC1)
+        
+    def _tinit(self):
+        self._pipe = rs.pipeline()
+        cfg = rs.config()
+        height, width = self.resolution
+        width >>= 1
+        cfg.enable_stream(rs.stream.fisheye, 1, width, height, rs.format.y8, 30)
+        cfg.enable_stream(rs.stream.fisheye, 2, width, height, rs.format.y8, 30)
+        
+        #sensor options - needs to be done before start
+        profile = cfg.resolve(self._pipe)
+        sensor = profile.get_device().query_sensors()[0]
+        sensor.set_option(rs.option.enable_auto_exposure, 0)
+        sensor.set_option(rs.option.exposure, self.exposure)
+        sensor.set_option(rs.option.gain, self._gain)
+        
+        profile = self._pipe.start(cfg)
+        self._sensor = profile.get_device().query_sensors()[0]
+        
+        #calibration data
+        # calibration = self._readCalibrationFromDevice(profile)
+        calibration = load_calibration_from_file("data/T265_calibration_kbrad4.json", (height, width))
+
         return
         
     def _readLeftRightImage(self, undistort):
