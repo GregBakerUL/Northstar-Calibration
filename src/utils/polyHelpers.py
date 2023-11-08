@@ -54,8 +54,8 @@ def calcCoeffs(sideId, data, pixToRectFunc, polynomialDegree=3):
 
   # Extract the Valid Measurements and arrange into a flat array
   coordinates          = np.zeros((data.shape[0], data.shape[1], 2), dtype=np.int32)  
-  coordinates[:, :, 1] = np.arange(0, data.shape[0])[:, None]  # Prepare the coordinates Y
-  coordinates[:, :, 0] = np.arange(0, data.shape[1])[None, :]  # Prepare the coordinates X
+  coordinates[:, :, 0] = np.arange(0, data.shape[0])[:, None]  # Prepare the coordinates X
+  coordinates[:, :, 1] = np.arange(0, data.shape[1])[None, :]  # Prepare the coordinates Y
 
   # Sample the non-zero indices from the flattened coordinates and data arrays
   non_zero_indices     = np.nonzero(mask.reshape(-1))[0] # Get non-zero mask indices
