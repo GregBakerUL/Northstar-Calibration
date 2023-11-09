@@ -309,9 +309,10 @@ class CalibrationWidget(QWidget):
             "ELP": {
                 "cls": Cv2Camera,
                 "kwargs": {
-                    "index": 1,
+                    "index": 0,
                     "fisheye": True,
-                    "calibrationFile": "../data/zedCalibrationVGA.json"
+                    "calibrationFile": "../data/zedCalibrationVGA.json",
+                    "fps": 15
                 },
                 "exposure": {
                     "minimum": -8,

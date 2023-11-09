@@ -172,7 +172,7 @@ class IntelCameraThread(CameraThread):
         
 class Cv2CameraThread(CameraThread):
     
-    def __init__(self, index, fisheye, calibrationFile, autoExposure, exposure):
+    def __init__(self, index, fisheye, calibrationFile, autoExposure, exposure, fps):
         super().__init__()
         self.calibration = None
         self.sides = ("left", "right")
@@ -182,6 +182,7 @@ class Cv2CameraThread(CameraThread):
         self._fisheye = fisheye
         self._autoExposure = autoExposure
         self._exposure = exposure
+        self._fps = fps
         return
     
     @property
@@ -195,6 +196,10 @@ class Cv2CameraThread(CameraThread):
     @property
     def exposure(self):
         return self._cap.get(cv2.CAP_PROP_EXPOSURE)
+    
+    @property
+    def fps(self):
+        return self._cap.get(cv2.CAP_PROP_FPS)
         
     @exposure.setter
     def exposure(self, value):
@@ -223,6 +228,8 @@ class Cv2CameraThread(CameraThread):
         self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.calibration["imageHeight"])
         self._cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, self._autoExposure)
         self.exposure = self._exposure
+        if self.fps is not None:
+            self._cap.set(cv2.CAP_PROP_FPS, self._fps)
         return
         
     def _readLeftRightImage(self, undistort):
@@ -680,8 +687,8 @@ class LeapCamera(Camera):
         
 class Cv2Camera(Camera):
     
-    def __init__(self, index, autoExposure=0.25, exposure=-3, undistort=True, fisheye=False, calibrationFile="../data/Cv2CameraCalibration.json"):
-        self.cameraThread = Cv2CameraThread(index, fisheye, calibrationFile, autoExposure, exposure)
+    def __init__(self, index, autoExposure=0.25, exposure=-3, undistort=True, fisheye=False, calibrationFile="../data/Cv2CameraCalibration.json", fps=None):
+        self.cameraThread = Cv2CameraThread(index, fisheye, calibrationFile, autoExposure, exposure, fps)
         self.undistort = undistort
         self.cameraThread.start()
         return
