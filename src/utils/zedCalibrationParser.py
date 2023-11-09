@@ -81,9 +81,9 @@ def parse_calibration(file_path, resolution):
         "R2": R2.tolist(),
         "T1": [0, 0, 0],
         "T2": [
-            float(stereo_dict.get('Baseline', 0.0)),
-            float(stereo_dict.get('TY', 0.0)),
-            float(stereo_dict.get('TZ', 0.0))
+            float(stereo_dict.get('Baseline', 0.0))/1000.0,
+            float(stereo_dict.get('TY', 0.0))/1000.0,
+            float(stereo_dict.get('TZ', 0.0))/1000.0
         ],
         # Assuming VGA resolution as a placeholder
         "imageWidth": resolution_dict[resolution][0],
