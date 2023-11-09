@@ -213,7 +213,7 @@ class Cv2CameraThread(CameraThread):
         ufunc = cv2.fisheye.initUndistortRectifyMap if self.fisheye is True else cv2.initUndistortRectifyMap
         for key in self.calibration:
             if isinstance(self.calibration[key], list):
-                self.calibration[key] = np.array(self.calibration[key])
+                self.calibration[key] = np.array(self.calibration[key], dtype=np.float32)
         for i, side in enumerate(self.sides):
             cm = self.calibration[side + "CameraMatrix"]
             dc = self.calibration[side + "DistCoeffs"]
