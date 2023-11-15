@@ -224,7 +224,7 @@ class Cv2CameraThread(CameraThread):
             dc = self.calibration[side + "DistCoeffs"]
             self.calibration[side + "Map"] = ufunc(cm, dc, self.calibration[f"R{i + 1}"], cm, (self.calibration["imageWidth"], self.calibration["imageHeight"]), cv2.CV_32FC1)
 
-        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.calibration["imageWidth"] << 1)
+        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.calibration["imageWidth"])
         self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.calibration["imageHeight"])
         self._cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, self._autoExposure)
         self.exposure = self._exposure
@@ -764,7 +764,7 @@ if __name__=="__main__":
     #cam = T265Camera()
     #cam = XvisioCamera()
     #cam = LeapCamera(True)
-    cam = Cv2Camera(1)
+    cam = Cv2Camera(0, fisheye=True, calibrationFile="../data/leap2CameraCalibration.json", exposure=200)
     try:
         print(cam.ready)
         while cam.ready is False:

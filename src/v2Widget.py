@@ -311,8 +311,7 @@ class CalibrationWidget(QWidget):
                 "kwargs": {
                     "index": 0,
                     "fisheye": True,
-                    "calibrationFile": "../data/zedCalibrationVGA.json",
-                    "fps": 15
+                    "calibrationFile": "../data/leap2CameraCalibration.json",
                 },
                 "exposure": {
                     "minimum": -8,
